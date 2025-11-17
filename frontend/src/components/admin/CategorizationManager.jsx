@@ -4,6 +4,7 @@ import React from 'react';
 import TeamManager from './TeamManager';
 import CategoryManager from './CategoryManager';
 import ClientTeamAssociationManager from './ClientTeamAssociationManager';
+import RuleDiscoveryManager from './RuleDiscoveryManager'; // <-- Import the new component
 
 /**
  * Manages the UI for Teams, Categories, Associations, and Rules.
@@ -24,13 +25,13 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
 
         <ul className="nav nav-tabs" id="ruleTabs" role="tablist">
           <li className="nav-item" role="presentation">
-            <button className="nav-link active" id="manage-teams-cats-tab" data-bs-toggle="tab" data-bs-target="#manage-teams-cats-pane" type="button" role="tab">
+            <button className="nav-link active" id="setup-tab" data-bs-toggle="tab" data-bs-target="#setup-pane" type="button" role="tab">
               Setup
             </button>
           </li>
           <li className="nav-item" role="presentation">
-            <button className="nav-link" id="discover-tab" data-bs-toggle="tab" data-bs-target="#discover-pane" type="button" role="tab" disabled>
-              Discover & Assign Rules (coming soon)
+            <button className="nav-link" id="discover-tab" data-bs-toggle="tab" data-bs-target="#discover-pane" type="button" role="tab">
+              Discover & Assign Rules
             </button>
           </li>
           <li className="nav-item" role="presentation">
@@ -42,7 +43,7 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
 
         <div className="tab-content pt-3">
           {/* ----- TAB 1: SETUP (TEAMS, CATEGORIES, ASSOCIATIONS) ----- */}
-          <div className="tab-pane fade show active" id="manage-teams-cats-pane" role="tabpanel">
+          <div className="tab-pane fade show active" id="setup-pane" role="tabpanel">
             <div className="row g-4">
               <div className="col-lg-4">
                 <h5>1. Manage Teams</h5>
@@ -66,9 +67,13 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
             </div>
           </div>
 
-          {/* ----- TAB 2: DISCOVER & ASSIGN (Placeholder) ----- */}
+          {/* ----- TAB 2: DISCOVER & ASSIGN ----- */}
           <div className="tab-pane fade" id="discover-pane" role="tabpanel">
-            <p>UI for discovering new rules will be built here.</p>
+            <RuleDiscoveryManager 
+              configs={configs}
+              categories={categories}
+              onDataChange={onDataChange}
+            />
           </div>
           
           {/* ----- TAB 3: MANAGE EXISTING (Placeholder) ----- */}
@@ -81,5 +86,4 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
   );
 }
 
-export default CategorizationManager;```
-
+export default CategorizationManager;
