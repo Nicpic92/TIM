@@ -1,8 +1,9 @@
 import React from 'react';
 
-// Import child components (we will create these next)
+// Import child components
 import TeamManager from './TeamManager';
 import CategoryManager from './CategoryManager';
+import ClientTeamAssociationManager from './ClientTeamAssociationManager';
 
 /**
  * Manages the UI for Teams, Categories, Associations, and Rules.
@@ -24,12 +25,12 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
         <ul className="nav nav-tabs" id="ruleTabs" role="tablist">
           <li className="nav-item" role="presentation">
             <button className="nav-link active" id="manage-teams-cats-tab" data-bs-toggle="tab" data-bs-target="#manage-teams-cats-pane" type="button" role="tab">
-              Manage Teams & Categories
+              Setup
             </button>
           </li>
           <li className="nav-item" role="presentation">
             <button className="nav-link" id="discover-tab" data-bs-toggle="tab" data-bs-target="#discover-pane" type="button" role="tab" disabled>
-              Discover, Assign & Triage (coming soon)
+              Discover & Assign Rules (coming soon)
             </button>
           </li>
           <li className="nav-item" role="presentation">
@@ -40,17 +41,26 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
         </ul>
 
         <div className="tab-content pt-3">
-          {/* ----- TAB 1: MANAGE TEAMS & CATEGORIES ----- */}
+          {/* ----- TAB 1: SETUP (TEAMS, CATEGORIES, ASSOCIATIONS) ----- */}
           <div className="tab-pane fade show active" id="manage-teams-cats-pane" role="tabpanel">
-            <div className="row">
-              <div className="col-md-6">
+            <div className="row g-4">
+              <div className="col-lg-4">
+                <h5>1. Manage Teams</h5>
                 <TeamManager teams={teams} onDataChange={onDataChange} />
               </div>
-              <div className="col-md-6">
+              <div className="col-lg-4">
+                <h5>2. Manage Categories</h5>
                 <CategoryManager 
                   categories={categories} 
                   teams={teams} 
                   onDataChange={onDataChange} 
+                />
+              </div>
+              <div className="col-lg-4">
+                <h5>3. Manage Client-Team Associations</h5>
+                <ClientTeamAssociationManager 
+                  configs={configs}
+                  teams={teams}
                 />
               </div>
             </div>
@@ -71,4 +81,14 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
   );
 }
 
-export default CategorizationManager;
+export default CategorizationManager;```
+
+---
+
+### ✅ Milestone: Setup Tab Complete
+
+With this change, the first tab of our `CategorizationManager` is now functionally complete. Users can manage teams, manage categories, and define the relationships between clients and teams, all from one screen.
+
+The next major step is to build the functionality for the second tab: **"Discover, Assign & Triage"**. This is the core workflow for teaching the system new rules. We will start by creating the main component for this tab.
+
+Let me know when you're ready to proceed.
