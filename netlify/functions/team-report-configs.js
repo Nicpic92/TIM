@@ -2,35 +2,37 @@ import { z } from 'zod';
 import { getDbPool } from './utils/database.js';
 import { log, createJsonResponse, createErrorResponse } from './utils/apiUtils.js';
 
-const FUNCTION_NAME = 'client-team-associations.js';
+const FUNCTION_NAME = 'team-report-configs.js';
 
-// Schema for validating a single config_id from a query string.
-const querySchema = z.object({
-  config_id: z.string().regex(/^\d+$/, { message: 'config_id must be a positive integer.' }),
+// Reusable schema for validating a numeric ID from a query string.
+const idSchema = z.object({
+  id: z.string().regex(/^\d+$/, { message: 'ID must be a positive integer.' }),
 });
 
-// Schema for validating the body of a POST request.
-const postSchema = z.object({
-  config_id: z.number().positive(),
-  // team_ids must be an array of positive numbers.
-  team_ids: z.array(z.number().positive()),
+// Validation schema for the body of POST and PUT requests.
+const reportConfigSchema = z.object({
+  team_id: z.number().positive(),
+  category_id: z.number().positive(),
+  // Ensures report_config_data is a valid object.
+  report_config_data: z.record(z.any()).refine(val => val !== null && typeof val === 'object' && !Array.isArray(val), {
+    message: 'report_config_data must be a valid JSON object.'
+  }),
 });
 
 /**
- * Main handler for the /client-team-associations endpoint.
+ * Main handler for the /team-report-configs endpoint.
  */
 export async function handler(event, context) {
   try {
     switch (event.httpMethod) {
       case 'GET':
-        // If a config_id is present, get associations for that specific client.
-        if (event.queryStringParameters?.config_id) {
-          return await getAssociations(event);
-        }
-        // Otherwise, get all associations.
-        return await getAllAssociations();
+        return await getReportConfigs();
       case 'POST':
-        return await saveAssociations(event);
+        return await createReportConfig(event);
+      case 'PUT':
+        return await updateReportConfig(event);
+      case 'DELETE':
+        return await deleteReportConfig(event);
       default:
         return createJsonResponse(405, { error: 'Method Not Allowed' });
     }
@@ -39,71 +41,96 @@ export async function handler(event, context) {
   }
 }
 
-async function getAllAssociations() {
-  log('INFO', FUNCTION_NAME, 'Fetching all client-team associations.');
+async function getReportConfigs() {
+  log('INFO', FUNCTION_NAME, 'Received request to get all team report configs.');
   const pool = getDbPool();
-  const { rows } = await pool.query('SELECT config_id, team_id FROM client_team_associations;');
+  const { rows } = await pool.query('SELECT * FROM team_report_configurations ORDER BY team_id, category_id;');
+  log('INFO', FUNCTION_NAME, `Successfully fetched ${rows.length} report configs.`);
   return createJsonResponse(200, rows);
 }
 
-async function getAssociations(event) {
-  const queryValidation = querySchema.safeParse(event.queryStringParameters);
-  if (!queryValidation.success) {
-    const errorMessage = 'Invalid config_id parameter.';
-    log('WARN', FUNCTION_NAME, errorMessage, { errors: queryValidation.error.issues });
-    return createJsonResponse(400, { error: errorMessage, details: queryValidation.error.format() });
-  }
-
-  const configId = parseInt(queryValidation.data.config_id, 10);
-  log('INFO', FUNCTION_NAME, `Fetching associations for config_id: ${configId}`);
-  const pool = getDbPool();
-  const { rows } = await pool.query('SELECT team_id FROM client_team_associations WHERE config_id = $1;', [configId]);
+async function createReportConfig(event) {
+  log('INFO', FUNCTION_NAME, 'Received request to create a team report config.');
   
-  // Return a simple array of numbers, e.g., [1, 5, 12]
-  return createJsonResponse(200, rows.map(r => r.team_id));
-}
-
-async function saveAssociations(event) {
   const body = JSON.parse(event.body);
-  const validation = postSchema.safeParse(body);
+  const validation = reportConfigSchema.safeParse(body);
 
   if (!validation.success) {
-    const errorMessage = 'Invalid body for saving associations.';
+    const errorMessage = 'Invalid input for creating a report config.';
     log('WARN', FUNCTION_NAME, errorMessage, { errors: validation.error.issues });
     return createJsonResponse(400, { error: errorMessage, details: validation.error.format() });
   }
 
-  const { config_id, team_ids } = validation.data;
-  log('INFO', FUNCTION_NAME, `Saving ${team_ids.length} associations for config_id: ${config_id}`);
-  
+  const { team_id, category_id, report_config_data } = validation.data;
   const pool = getDbPool();
-  const client = await pool.connect();
+  const sql = `
+    INSERT INTO team_report_configurations (team_id, category_id, report_config_data)
+    VALUES ($1, $2, $3)
+    RETURNING *;
+  `;
+  const { rows } = await pool.query(sql, [team_id, category_id, report_config_data]);
 
-  try {
-    await client.query('BEGIN');
-    log('INFO', FUNCTION_NAME, `Transaction started for config_id: ${config_id}`);
+  log('INFO', FUNCTION_NAME, `Successfully created report config with ID: ${rows[0].id}.`);
+  return createJsonResponse(201, rows[0]);
+}
 
-    // First, delete all existing associations for this client.
-    await client.query('DELETE FROM client_team_associations WHERE config_id = $1;', [config_id]);
+async function updateReportConfig(event) {
+  log('INFO', FUNCTION_NAME, 'Received request to update a team report config.');
+  
+  const { id } = event.queryStringParameters || {};
+  const idValidation = idSchema.safeParse({ id });
 
-    // If there are new team_ids to associate, insert them.
-    if (team_ids.length > 0) {
-      // Use PostgreSQL's unnest function for an efficient bulk insert.
-      const insertSql = `
-        INSERT INTO client_team_associations (config_id, team_id)
-        SELECT $1, unnest($2::int[]);
-      `;
-      await client.query(insertSql, [config_id, team_ids]);
-    }
-
-    await client.query('COMMIT');
-    log('INFO', FUNCTION_NAME, `Transaction COMMITTED for config_id: ${config_id}`);
-    return createJsonResponse(201, { message: 'Associations saved successfully.' });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    log('ERROR', FUNCTION_NAME, `Transaction ROLLED BACK for config_id: ${config_id}`, { errorMessage: error.message });
-    throw error;
-  } finally {
-    client.release();
+  if (!idValidation.success) {
+    const errorMessage = 'Invalid or missing report config ID for update.';
+    return createJsonResponse(400, { error: errorMessage, details: idValidation.error.format() });
   }
+
+  const body = JSON.parse(event.body);
+  const bodyValidation = reportConfigSchema.safeParse(body);
+
+  if (!bodyValidation.success) {
+    const errorMessage = 'Invalid input for updating a report config.';
+    return createJsonResponse(400, { error: errorMessage, details: bodyValidation.error.format() });
+  }
+
+  const configId = parseInt(idValidation.data.id, 10);
+  const { team_id, category_id, report_config_data } = bodyValidation.data;
+  const pool = getDbPool();
+  const sql = `
+    UPDATE team_report_configurations 
+    SET team_id = $1, category_id = $2, report_config_data = $3, last_updated = CURRENT_TIMESTAMP
+    WHERE id = $4
+    RETURNING *;
+  `;
+  const { rows } = await pool.query(sql, [team_id, category_id, report_config_data, configId]);
+
+  if (rows.length === 0) {
+    return createErrorResponse(404, `Report config with ID ${configId} not found.`, new Error('Not Found'), FUNCTION_NAME);
+  }
+
+  log('INFO', FUNCTION_NAME, `Successfully updated report config with ID: ${configId}.`);
+  return createJsonResponse(200, rows[0]);
+}
+
+async function deleteReportConfig(event) {
+  log('INFO', FUNCTION_NAME, 'Received request to delete a team report config.');
+
+  const { id } = event.queryStringParameters || {};
+  const validation = idSchema.safeParse({ id });
+
+  if (!validation.success) {
+    const errorMessage = 'Invalid or missing report config ID for deletion.';
+    return createJsonResponse(400, { error: errorMessage, details: validation.error.format() });
+  }
+  
+  const configId = parseInt(validation.data.id, 10);
+  const pool = getDbPool();
+  const result = await pool.query('DELETE FROM team_report_configurations WHERE id = $1;', [configId]);
+  
+  if (result.rowCount === 0) {
+    return createErrorResponse(404, `Report config with ID ${configId} not found.`, new Error('Not Found'), FUNCTION_NAME);
+  }
+
+  log('INFO', FUNCTION_NAME, `Successfully deleted report config with ID: ${configId}.`);
+  return createJsonResponse(200, { message: `Report config ${configId} deleted successfully.` });
 }
