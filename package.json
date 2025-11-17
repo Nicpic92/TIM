@@ -1,0 +1,20 @@
+{
+  "name": "mirra-claims-dashboard-rebuild",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The root of the claims dashboard monorepo, managing frontend and backend workspaces.",
+  "workspaces": [
+    "frontend",
+    "netlify"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:frontend dev:netlify",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:netlify": "netlify dev",
+    "build": "npm run build --workspace=frontend"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0",
+    "npm-run-all": "^4.1.5"
+  }
+}
