@@ -1,5 +1,7 @@
 import { Outlet, Link } from 'react-router-dom';
-import mirraLogo from '../../../../public/logo.png';
+// FIXED: Changed path from '../../../../public/logo.png' to '../../../public/logo.png' 
+// to correctly reference the logo from the 'frontend/public' directory.
+import mirraLogo from '../../../public/logo.png'; 
 // Assuming logo is in the public folder
 
 function MainLayout() {
