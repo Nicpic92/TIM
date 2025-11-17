@@ -1,6 +1,20 @@
 import React from 'react';
 import LoadingSpinner from '../common/LoadingSpinner';
 
+// Define the standard keys the application expects from the spreadsheet.
+// This list dictates the structure of the saved 'columnMappings' object.
+const STANDARD_KEYS = [
+  { key: 'claimId', label: 'Claim ID', required: true },
+  { key: 'state', label: 'State (e.g., PEND, ONHOLD)', required: true },
+  { key: 'status', label: 'Status (e.g., DENY)', required: true },
+  { key: 'age', label: 'Age (in Days)', required: true },
+  { key: 'netPayment', label: 'Net Payment / Amount at Risk', required: true },
+  { key: 'totalCharges', label: 'Total Charges (for Priority Score)', required: true },
+  { key: 'providerName', label: 'Billing Provider Name', required: true },
+  { key: 'notes', label: 'Claim Notes/Remarks (for Note Rules)', required: true },
+  { key: 'edit', label: 'Claim Edit Code (for Edit Rules)', required: true },
+];
+
 /**
  * Renders the form for creating or editing a client configuration.
  * @param {object} props
@@ -14,6 +28,17 @@ function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting }) {
   const handleInputChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+  
+  // Handles changes to the column mapping fields
+  const handleMappingChange = (standardKey, columnValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      columnMappings: {
+        ...prev.columnMappings,
+        [standardKey]: columnValue,
+      },
+    }));
   };
 
   return (
@@ -37,13 +62,47 @@ function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting }) {
           />
         </div>
 
-        {/* 
-          Placeholder for future, more complex form sections.
-          We will add the file uploader, column mappings, and PDF builder UI here later.
-        */}
+        {/* Step 2: Column Mapping */}
+        <h5 className="mt-4">Column Mapping</h5>
+        <p className="text-muted small">
+          Map the headers from the client's spreadsheet (Source Column Name) to our standard system fields (Standard Key).
+        </p>
+
+        <div className="table-responsive mb-4">
+          <table className="table table-sm table-bordered">
+            <thead className="table-light">
+              <tr>
+                <th>Standard Key (System Field)</th>
+                <th>Source Column Name (Client Header)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {STANDARD_KEYS.map((item) => (
+                <tr key={item.key}>
+                  <td className={item.required ? 'fw-bold' : ''}>
+                    {item.label}
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      className="form-control form-control-sm"
+                      value={formData.columnMappings?.[item.key] || ''}
+                      onChange={(e) => handleMappingChange(item.key, e.target.value)}
+                      placeholder="e.g., CLAIM_ID"
+                      required={item.required}
+                      disabled={isSubmitting}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Placeholder for PDF Builder - Replaces old alert */}
         <div className="alert alert-info">
           <i className="bi bi-info-circle-fill me-2"></i>
-          Column mapping and PDF report builder sections will be added here.
+          PDF report builder sections will be added here.
         </div>
 
         <hr />
