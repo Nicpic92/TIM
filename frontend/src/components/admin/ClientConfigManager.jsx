@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { apiService } from '../../services/apiService';
 import toast from 'react-hot-toast';
+import { fileService } from '../../services/fileService'; // Import fileService
 
-// Import child components (we will create these next)
+// Import child components
 import ConfigList from './ConfigList';
 import ConfigForm from './ConfigForm';
 
 const initialFormData = {
   id: null,
   config_name: '',
-  // Initialize new data structure
   columnMappings: {},
-  pdfConfig: {}, // Placeholder for future PDF configuration
+  pdfConfig: {},
+  // NEW: State to store headers discovered from an uploaded file
+  availableHeaders: [], 
 };
 
 /**
@@ -21,9 +23,11 @@ const initialFormData = {
  * @param {Function} props.onConfigChange - Callback to refetch all admin data.
  */
 function ClientConfigManager({ configs, onConfigChange }) {
+  // Update state initialization to include availableHeaders
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(null); // Tracks the ID of the config being deleted
+  const [isDeleting, setIsDeleting] = useState(null); 
+  const [isDiscovering, setIsDiscovering] = useState(false); // New state for discovery status
 
   const handleEdit = (config) => {
     console.log('Editing config:', config);
@@ -33,15 +37,54 @@ function ClientConfigManager({ configs, onConfigChange }) {
       config_name: config.config_name,
       columnMappings: config.config_data?.columnMappings || {},
       pdfConfig: config.config_data?.pdfConfig || {},
-      // Ensure all parts of the config_data JSONB field are loaded
       config_data: config.config_data || {},
+      // When editing, clear available headers as they are context-dependent
+      availableHeaders: [], 
     });
-    // Scroll to the top of the form for better UX
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
   const handleClearForm = () => {
     setFormData(initialFormData);
+  };
+
+  /**
+   * Handles the file upload and extracts all headers from the report.
+   * @param {File} file The claims report file.
+   */
+  const handleHeaderDiscovery = async (file) => {
+    if (!file) return;
+
+    setIsDiscovering(true);
+    const toastId = toast.loading('Reading and analyzing spreadsheet headers...');
+    
+    try {
+      // Use the existing file service to parse the file
+      const data = await fileService.parseXlsxFile(file);
+      
+      if (data.length === 0) {
+        toast.error('File contains no data rows.', { id: toastId });
+        return;
+      }
+      
+      // Get all unique keys from the first row (headers)
+      const discoveredHeaders = Object.keys(data[0]);
+      
+      setFormData(prev => ({
+        ...prev,
+        // Store headers alphabetically
+        availableHeaders: discoveredHeaders.sort(),
+        // Clear existing mappings, as headers have changed
+        columnMappings: {}, 
+      }));
+
+      toast.success(`Found ${discoveredHeaders.length} headers. You can now map them.`, { id: toastId });
+      
+    } catch (error) {
+      toast.error(error.message || 'Failed to process file for headers.', { id: toastId });
+    } finally {
+      setIsDiscovering(false);
+    }
   };
 
   const handleSave = async (e) => {
@@ -51,12 +94,12 @@ function ClientConfigManager({ configs, onConfigChange }) {
       return;
     }
     
-    // Simple validation for required mappings (e.g., check that all mapping fields are non-empty)
+    // Validation for required mappings
     const requiredMappingKeys = ['claimId', 'state', 'status', 'age', 'netPayment', 'totalCharges', 'providerName', 'notes', 'edit'];
     const isMappingComplete = requiredMappingKeys.every(key => formData.columnMappings?.[key]?.trim());
 
     if (!isMappingComplete) {
-        toast.error('All required column mappings must be completed.');
+        toast.error('All required column mappings must be selected.');
         return;
     }
 
@@ -66,11 +109,9 @@ function ClientConfigManager({ configs, onConfigChange }) {
     try {
       // Assemble the final config_data payload
       const config_data = {
-        // Carry over any existing config_data, then overwrite/add new structures
         ...(formData.config_data || {}), 
         columnMappings: formData.columnMappings,
         pdfConfig: formData.pdfConfig,
-        // Add a clientName placeholder for the DashboardControlPanel if needed
         clientName: formData.config_name, 
       };
 
@@ -80,16 +121,14 @@ function ClientConfigManager({ configs, onConfigChange }) {
       };
 
       if (formData.id) {
-        // Update existing configuration
         await apiService.updateConfig(formData.id, payload);
       } else {
-        // Create new configuration
         await apiService.createConfig(payload);
       }
       
       toast.success('Configuration saved successfully!', { id: toastId });
       handleClearForm();
-      await onConfigChange(); // Trigger data refetch in parent
+      await onConfigChange();
     } catch (error) {
       toast.error(error.message || 'Failed to save configuration.', { id: toastId });
     } finally {
@@ -111,7 +150,7 @@ function ClientConfigManager({ configs, onConfigChange }) {
       if (formData.id === configId) {
         handleClearForm();
       }
-      await onConfigChange(); // Trigger data refetch
+      await onConfigChange();
     } catch (error) {
       toast.error(error.message || 'Failed to delete configuration.', { id: toastId });
     } finally {
@@ -136,6 +175,10 @@ function ClientConfigManager({ configs, onConfigChange }) {
               onSave={handleSave}
               onClear={handleClearForm}
               isSubmitting={isSubmitting}
+              // NEW PROPS
+              availableHeaders={formData.availableHeaders}
+              onHeaderDiscovery={handleHeaderDiscovery}
+              isDiscovering={isDiscovering}
             />
           </div>
           <div className="col-lg-5">
