@@ -26,12 +26,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       }}
     />
   </React.StrictMode>
-);```
-
----
-
-#### **Next Steps:**
-
-1.  Save this file in the `/frontend/src` directory.
-
-Your `src` folder should now contain this single file:
+);
