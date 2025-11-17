@@ -13,10 +13,16 @@
   publish = "frontend/dist"
 
 # Redirect rule to proxy API requests to our serverless functions.
-# CHANGED: 'from' path is now '/api/*' to avoid Netlify build error.
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback rule: Redirects all non-file paths to index.html
+# This allows React Router to handle client-side routing (e.g., /admin).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 # Configuration for local development using the Netlify CLI (`netlify dev`).
