@@ -4,7 +4,8 @@ import React from 'react';
 import TeamManager from './TeamManager';
 import CategoryManager from './CategoryManager';
 import ClientTeamAssociationManager from './ClientTeamAssociationManager';
-import RuleDiscoveryManager from './RuleDiscoveryManager'; // <-- Import the new component
+import RuleDiscoveryManager from './RuleDiscoveryManager';
+import RuleManager from './RuleManager'; // <-- Import the final component
 
 /**
  * Manages the UI for Teams, Categories, Associations, and Rules.
@@ -35,8 +36,8 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
             </button>
           </li>
           <li className="nav-item" role="presentation">
-            <button className="nav-link" id="manage-rules-tab" data-bs-toggle="tab" data-bs-target="#manage-rules-pane" type="button" role="tab" disabled>
-              Manage Existing Rules (coming soon)
+            <button className="nav-link" id="manage-rules-tab" data-bs-toggle="tab" data-bs-target="#manage-rules-pane" type="button" role="tab">
+              Manage Existing Rules
             </button>
           </li>
         </ul>
@@ -76,9 +77,13 @@ function CategorizationManager({ teams, categories, configs, onDataChange }) {
             />
           </div>
           
-          {/* ----- TAB 3: MANAGE EXISTING (Placeholder) ----- */}
+          {/* ----- TAB 3: MANAGE EXISTING ----- */}
           <div className="tab-pane fade" id="manage-rules-pane" role="tabpanel">
-            <p>UI for managing existing rules will be built here.</p>
+            <RuleManager 
+              configs={configs}
+              categories={categories}
+              onDataChange={onDataChange}
+            />
           </div>
         </div>
       </div>
