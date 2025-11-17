@@ -1,5 +1,6 @@
 // The base URL for all our serverless functions
-const API_BASE_URL = '/.netlify/functions';
+// CHANGED: Using '/api' to match the new redirect rule in netlify.toml
+const API_BASE_URL = '/api';
 
 /**
  * A generic API call utility.
