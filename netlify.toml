@@ -13,12 +13,19 @@
   publish = "frontend/dist"
 
 # Redirect rule to proxy API requests to our serverless functions.
-# This allows the frontend to call functions at the same origin.
+# CHANGED: 'from' path is now '/api/*' to avoid Netlify build error.
 [[redirects]]
-  from = "/api/*" # CHANGED FROM "/.netlify/functions/*"
+  from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
 # Configuration for local development using the Netlify CLI (`netlify dev`).
 [dev]
-# ... (rest of file)
+  # Tells the CLI we are proxying to a frontend framework dev server.
+  framework = "#static"
+  
+  # The port that Vite (our frontend dev server) runs on by default.
+  targetPort = 5173
+  
+  # The directory to publish, same as in the [build] context.
+  publish = "frontend/dist"
