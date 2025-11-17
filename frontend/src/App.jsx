@@ -6,7 +6,8 @@ import AdminPage from './pages/AdminPage';
 import ReportsPage from './pages/ReportsPage';
 
 // Import Layout Component (we will create this next)
-import MainLayout from './components/layout/MainLayout';
+// FIXED: Added '.jsx' extension for proper resolution in production build
+import MainLayout from './components/layout/MainLayout.jsx';
 
 function App() {
   return (
