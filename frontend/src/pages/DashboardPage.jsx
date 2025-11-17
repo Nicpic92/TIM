@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { apiService } from '../services/apiService';
+import { claimService } from '../services/claimService'; // <-- Import the claim service
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-// We will create these components next
 import DashboardControlPanel from '../components/dashboard/DashboardControlPanel';
 import DashboardContent from '../components/dashboard/DashboardContent';
 
@@ -11,9 +11,10 @@ function DashboardPage() {
   const [selectedConfigId, setSelectedConfigId] = useState('');
   const [clientRules, setClientRules] = useState({ editRules: [], noteRules: [] });
   const [allClaimsData, setAllClaimsData] = useState([]);
+  const [metrics, setMetrics] = useState(null); // <-- State for summary metrics
   
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false); // For file processing
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch all configurations on initial load
   useEffect(() => {
@@ -34,11 +35,12 @@ function DashboardPage() {
   useEffect(() => {
     if (!selectedConfigId) {
       setClientRules({ editRules: [], noteRules: [] });
-      setAllClaimsData([]); // Clear data when config changes
+      setAllClaimsData([]);
+      setMetrics(null);
       return;
     }
     const fetchRules = async () => {
-      setIsProcessing(true); // Use processing state to show loading
+      setIsProcessing(true);
       try {
         const [editRules, noteRules] = await Promise.all([
           apiService.getRules('edit', selectedConfigId),
@@ -54,24 +56,40 @@ function DashboardPage() {
     fetchRules();
   }, [selectedConfigId]);
 
-  const handleProcessFile = async (claimsData) => {
-    // Placeholder for the main claims analysis logic
-    setIsProcessing(true);
-    toast.success(`Processing ${claimsData.length} records... Analysis logic to be implemented.`);
-    
-    // We will replace this with the real processing logic soon
-    console.log("Raw claims data:", claimsData);
-    console.log("Using rules:", clientRules);
-    
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For now, just store the raw data to show the content area
-    setAllClaimsData(claimsData); 
-    setIsProcessing(false);
-  };
-
   const selectedConfig = configs.find(c => c.id == selectedConfigId);
+
+  // This is the main analysis function
+  const handleProcessFile = async (rawData) => {
+    if (!selectedConfig) {
+      toast.error("Cannot process file without a selected client configuration.");
+      return;
+    }
+    
+    setIsProcessing(true);
+    toast.loading(`Analyzing ${rawData.length} records...`);
+
+    try {
+      // Use a timeout to allow the UI to update before this heavy computation
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const { claims, metrics: newMetrics } = claimService.analyzeAndProcessClaims(
+        rawData,
+        selectedConfig.config_data.columnMappings,
+        clientRules
+      );
+
+      setAllClaimsData(claims);
+      setMetrics(newMetrics);
+      toast.dismiss();
+      toast.success('Analysis complete!');
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      toast.dismiss();
+      toast.error(error.message || "An error occurred during claims analysis.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (isLoading) {
     return <LoadingSpinner fullPage={true} />;
@@ -92,7 +110,7 @@ function DashboardPage() {
       ) : allClaimsData.length > 0 ? (
         <DashboardContent 
           claimsData={allClaimsData}
-          // We will pass more props here later (metrics, etc.)
+          metrics={metrics}
         />
       ) : (
         <div className="mt-4 text-center">
