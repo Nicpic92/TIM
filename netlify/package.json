@@ -1,0 +1,11 @@
+{
+  "name": "netlify-functions",
+  "version": "1.0.0",
+  "description": "Dependencies for the Netlify serverless functions.",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "pg": "^8.11.3",
+    "zod": "^3.22.4"
+  }
+}
