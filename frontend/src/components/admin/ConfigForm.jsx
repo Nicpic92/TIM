@@ -14,21 +14,23 @@ const STANDARD_KEYS = [
   { key: 'edit', label: 'Claim Edit Code (for Edit Rules)', required: true },
 ];
 
+// NEW: Hardcoded list of all client report headers as requested by the user.
+const HARDCODED_HEADERS = [
+    'Payer', 'Category', 'Claim Number', 'Type', 'Received Date', 
+    'Billing Provider Name', 'Billing Provider Tax ID', 'Billing Provider NPI', 
+    'Claim State', 'Claim Status', 'Patient', 'Subs Id', 'Rendering Provider Name', 
+    'Rendering Provider NPI', 'DOSFromDate', 'DOSToDate', 'Clean Age', 'Age', 
+    'TotalCharges', 'TotalNetPaymentAmt', 'NetworkStatus', 'PBP Name', 'Plan Name', 
+    'DSNP or Non DSNP', 'Claim Edits', 'Claim Notes', 'Activity Logger Description', 
+    'Activity Performed By', 'Activity Performed On'
+];
+
 /**
  * Renders the form for creating or editing a client configuration.
- * @param {object} props
- * @param {object} props.formData - The current state of the form data.
- * @param {Function} props.setFormData - Function to update the form data state.
- * @param {Function} props.onSave - Callback function to handle form submission.
- * @param {Function} props.onClear - Callback function to clear the form.
- * @param {boolean} props.isSubmitting - Flag indicating if the form is currently being submitted.
- * @param {Array<string>} props.availableHeaders - Headers discovered from the uploaded file.
- * @param {Function} props.onHeaderDiscovery - Callback to process the uploaded file.
- * @param {boolean} props.isDiscovering - Flag indicating if header discovery is ongoing.
+// ... (omitted props for brevity, but they are all still used)
  */
 function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting, availableHeaders, onHeaderDiscovery, isDiscovering }) {
   
-  // Use a key to force re-render/reset of the file input when availableHeaders changes
   const fileInputKey = formData.id || availableHeaders.length;
 
   const handleInputChange = (e) => {
@@ -36,7 +38,6 @@ function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting, avai
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
   
-  // Handles changes to the column mapping fields
   const handleMappingChange = (standardKey, columnValue) => {
     setFormData((prev) => ({
       ...prev,
@@ -46,6 +47,11 @@ function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting, avai
       },
     }));
   };
+
+  // Determine which list of headers to use for the dropdowns
+  // Always prioritize the hardcoded list for display
+  const headersToUse = HARDCODED_HEADERS.length > 0 ? HARDCODED_HEADERS : availableHeaders;
+  const isHeadersAvailable = headersToUse.length > 0;
 
   return (
     <form onSubmit={onSave}>
@@ -69,14 +75,14 @@ function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting, avai
           />
         </div>
 
-        {/* NEW: Step 2: Header Discovery */}
-        <h5 className="mt-4">1. Discover Report Headers</h5>
+        {/* 1. Discover Report Headers (File Upload remains optional but is now superseded) */}
+        <h5 className="mt-4">1. Discover Report Headers (Optional)</h5>
         <p className="text-muted small">
-          Upload a sample claims report (XLSX) to automatically extract available column headers.
+          **Note:** Column headers below are now permanently hardcoded from your specified list. Uploading a file here will only validate the headers you enter.
         </p>
         <div className="input-group mb-3">
             <input
-                key={fileInputKey} // Use key to reset input field
+                key={fileInputKey}
                 type="file"
                 className="form-control"
                 accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -86,19 +92,18 @@ function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting, avai
              <button 
               className="btn btn-primary" 
               type="button" 
-              disabled={true} // Disable button since change event on input triggers the action
+              disabled={true}
             >
               {isDiscovering ? <><LoadingSpinner /> Analyzing...</> : 'Scan Headers'}
             </button>
         </div>
         
-        {availableHeaders.length > 0 && (
-          <div className="alert alert-success small py-2">
-            Headers Discovered: **{availableHeaders.join(', ')}**
-          </div>
-        )}
+        {/* Display message confirming hardcoded headers */}
+        <div className="alert alert-warning small py-2">
+            **{HARDCODED_HEADERS.length} Hardcoded Headers** loaded for mapping.
+        </div>
         
-        {/* Step 3: Column Mapping - Now uses Select/Dropdown */}
+        {/* 2. Column Mapping */}
         <h5 className="mt-4">2. Column Mapping</h5>
         <p className="text-muted small">
           Select the client's report headers to map to the standard system fields.
@@ -119,7 +124,7 @@ function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting, avai
                     {item.label}
                   </td>
                   <td>
-                    {availableHeaders.length > 0 ? (
+                    {isHeadersAvailable ? (
                       <select
                         className="form-select form-select-sm"
                         value={formData.columnMappings?.[item.key] || ''}
@@ -128,20 +133,20 @@ function ConfigForm({ formData, setFormData, onSave, onClear, isSubmitting, avai
                         disabled={isSubmitting || isDiscovering}
                       >
                         <option value="">Select a header...</option>
-                        {availableHeaders.map(header => (
+                        {headersToUse.map(header => (
                           <option key={header} value={header}>
                             {header}
                           </option>
                         ))}
                       </select>
                     ) : (
-                       // Fallback to manual input if no headers are discovered
+                       // Fallback remains as manual input (though less necessary now)
                       <input
                         type="text"
                         className="form-control form-control-sm"
                         value={formData.columnMappings?.[item.key] || ''}
                         onChange={(e) => handleMappingChange(item.key, e.target.value)}
-                        placeholder="Upload file or type header name"
+                        placeholder="Select header name"
                         required={item.required}
                         disabled={isSubmitting || isDiscovering}
                       />
