@@ -9,7 +9,9 @@ import ConfigForm from './ConfigForm';
 const initialFormData = {
   id: null,
   config_name: '',
-  // We will add more complex form data like mappings and PDF layouts later
+  // Initialize new data structure
+  columnMappings: {},
+  pdfConfig: {}, // Placeholder for future PDF configuration
 };
 
 /**
@@ -25,10 +27,14 @@ function ClientConfigManager({ configs, onConfigChange }) {
 
   const handleEdit = (config) => {
     console.log('Editing config:', config);
+    // When editing, pull all data from the existing config
     setFormData({
       id: config.id,
       config_name: config.config_name,
-      // More fields will be added here
+      columnMappings: config.config_data?.columnMappings || {},
+      pdfConfig: config.config_data?.pdfConfig || {},
+      // Ensure all parts of the config_data JSONB field are loaded
+      config_data: config.config_data || {},
     });
     // Scroll to the top of the form for better UX
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -44,13 +50,29 @@ function ClientConfigManager({ configs, onConfigChange }) {
       toast.error('Configuration Name is required.');
       return;
     }
+    
+    // Simple validation for required mappings (e.g., check that all mapping fields are non-empty)
+    const requiredMappingKeys = ['claimId', 'state', 'status', 'age', 'netPayment', 'totalCharges', 'providerName', 'notes', 'edit'];
+    const isMappingComplete = requiredMappingKeys.every(key => formData.columnMappings?.[key]?.trim());
+
+    if (!isMappingComplete) {
+        toast.error('All required column mappings must be completed.');
+        return;
+    }
 
     setIsSubmitting(true);
     const toastId = toast.loading(formData.id ? 'Updating configuration...' : 'Creating configuration...');
 
     try {
-      // This is a placeholder for the complex config_data object
-      const config_data = formData.id ? configs.find(c => c.id === formData.id)?.config_data || {} : {};
+      // Assemble the final config_data payload
+      const config_data = {
+        // Carry over any existing config_data, then overwrite/add new structures
+        ...(formData.config_data || {}), 
+        columnMappings: formData.columnMappings,
+        pdfConfig: formData.pdfConfig,
+        // Add a clientName placeholder for the DashboardControlPanel if needed
+        clientName: formData.config_name, 
+      };
 
       const payload = {
         config_name: formData.config_name,
