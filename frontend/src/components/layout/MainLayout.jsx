@@ -1,6 +1,6 @@
 import { Outlet, Link } from 'react-router-dom';
-// REMOVED the problematic import: import mirraLogo from '../../../public/logo.png'; 
-// Assuming logo is in the public folder
+
+// REMOVED the problematic 'import mirraLogo from "../../../public/logo.png";' entirely.
 
 function MainLayout() {
   return (
@@ -8,7 +8,7 @@ function MainLayout() {
       <header className="mb-4 d-flex justify-content-between align-items-center">
         <div>
           <img
-            // FIXED: Using absolute path '/logo.png' to directly reference the public asset.
+            // CORRECT: Using absolute path to reference the logo from the public directory.
             src="/logo.png" 
             alt="Mirra Logo"
             style={{ height: '24px', marginBottom: '10px' }}
