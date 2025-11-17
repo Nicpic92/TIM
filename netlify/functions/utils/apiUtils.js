@@ -53,4 +53,10 @@ export const createErrorResponse = (statusCode, publicMessage, error, functionNa
   return {
     statusCode,
     headers: {
-      'Content-Type': 'applicat
+      // FIXED: Completed the Content-Type header value
+      'Content-Type': 'application/json',
+    },
+    // FIXED: Added the required body structure for the error response
+    body: JSON.stringify({ error: publicMessage }),
+  };
+};
